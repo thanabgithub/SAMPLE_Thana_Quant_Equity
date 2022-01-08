@@ -1,8 +1,8 @@
 
-# SAMPLE_Thana_Time-series_data_analysis
+# SAMPLE_Thana_time-series_data_analysis
 This repository contains trading strategy, backtest and indicators that can be used to as educational materials/reference for quantitative analysis trading strategy research coding only.
 
-For those who are interested in data analysis for time-series, you can visit SAMPLE_Thana_Time-series_data_analysis\src\Thana_strat_tool\indicators. It contains a large number of statistical analysis, and filters. Those functions have been improved to speed up the calculations. I used some of those analysis tools to generate more than 5 % of active return in Thai equity market in 2021.
+For those who are interested in data analysis for time-series, you can visit SAMPLE_Thana_time-series_data_analysis\src\Thana_strat_tool\indicators. It contains a large number of statistical analysis, and filters. Those functions have been improved to speed up the calculations. I used some of those analysis tools to generate more than 5 % of active return in Thai equity market in 2021.
 
 ## Prerequisites
 ``` 
@@ -22,8 +22,8 @@ TA_Lib==0.4.19
 ## Installing
 
 1. Clone it from GitHub.
-2. Install the package by the following code. It will run SAMPLE_Thana_Time-series_data_analysis\setup.py for you and install the package with prerequisities.
-3. DONE. you can use SAMPLE_Thana_Time-series_data_analysis\src\Thana_strat_tool\indicator for your time-series analysis right away.
+2. Install the package by the following code. It will run SAMPLE_Thana_time-series_data_analysis\setup.py for you and install the package with prerequisities.
+3. DONE. you can use SAMPLE_Thana_time-series_data_analysis\src\Thana_strat_tool\indicator for your time-series analysis right away.
 ``` Terminal
 pip install .
 ```
