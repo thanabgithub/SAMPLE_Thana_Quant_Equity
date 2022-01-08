@@ -1,0 +1,17 @@
+dataframe_image==0.1.1
+finnix_research==1.1.0
+matplotlib==3.3.2
+numba==0.51.2
+numpy==1.19.5
+pandas==1.1.4
+Pillow==9.0.0
+potter==0.1.2b2
+requests==2.26.0
+scikit_learn==1.0.2
+scipy==1.5.2
+seaborn==0.11.0
+setuptools==50.3.2
+statsmodels==0.13.1
+TA_Lib==0.4.19
+xarray==0.18.2
+~tatsmodels==0.12.0
