@@ -1,6 +1,6 @@
 
 # SAMPLE_Thana_time-series_data_analysis
-This repository contains trading strategy, backtest and indicators that can be used to as educational materials/reference for quantitative analysis trading strategy research coding only.
+This repository contains trading strategy, backtest and indicators that can be used as educational materials/references for quantitative analysis trading strategy research coding.
 
 For those who are interested in data analysis for time-series, you can visit SAMPLE_Thana_time-series_data_analysis\src\Thana_strat_tool\indicators. It contains a large number of statistical analysis, and filters. Those functions have been improved to speed up the calculations. I used some of those analysis tools to generate more than 5 % of active return in Thai equity market in 2021.
 
