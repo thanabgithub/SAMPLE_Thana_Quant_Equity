@@ -84,6 +84,18 @@ def replace_na(input_arr, value):
 
 
 
+
+
+
+
+@calculate_time
+@nb.jit(nopython = False, fastmath = True,  parallel=True, cache=True)
+def add(a, b):
+    result = a + b
+    return result
+"""    
+result = tn_process_time(add(1, 3))   
+"""
 # %%
 large_arr = init_np_random(10000, 10000)
 large_arr = np.where(large_arr > 50, large_arr, np.nan)
@@ -159,27 +171,8 @@ def ffill(input_arr):
             result[row][col] = res_element
     return result
             
-
-# %%
-# measure_time_cls = Measure_time()
-# measure_time_cls.print_elapsed_time()
-# x1 = ffill_traditional(large_arr)
-# measure_time_cls.print_elapsed_time()
-
-# x4 = ffill_guvectorize(large_arr)
-# measure_time_cls.print_elapsed_time()
-
-# x5 = ffill_njit(large_arr)
-# measure_time_cls.print_elapsed_time()
-
-
-# %%
-
-@nb.njit
-def bfill(input_arr: np.array):
-    input_arr_inverse = np.flipud(input_arr)
-    output_arr = ffill(input_arr_inverse)
-    return np.flipud(output_arr)
+from numba import stencil
+# https://numba.pydata.org/numba-doc/dev/user/stencil.html
 
 
 
@@ -194,8 +187,174 @@ def rolling_window_1d(input_arr: np.array, window: int) -> np.array:
     )
     return output_arr
 
+@calculate_time
+def MA_stencil_1d_arr(a, p):
+    loop_start = p-1
+    @nb.stencil(neighborhood = ((-loop_start, 0),))
+    def window_with_length_p_inner(a, p):
+        cumul = 0
+        for i in range(-loop_start, 1):
+            cumul += a[i]
+        return cumul / p
+    return window_with_length_p_inner(a, p)
 
-def rolling_window_2d_traditional(input_arr: np.array, window: int) -> np.array:
+
+
+@calculate_time
+def MA_rollin_1d_arr(a, p):
+
+    temp = rolling_window_1d(a, p)
+    output = np.full(a.shape, np.nan)
+    for row in range(temp.shape[0]):
+        output[row] = temp[row].mean()
+    return output
+
+@nb.njit
+def insert_mean(A):
+    output = np.full(A.shape[0], np.nan)
+    for row in range(A.shape[0]):
+        output[row] = A[row].mean()  
+    return output
+
+
+def MA_rollin_1d_arr_v2(a, p):
+    temp = rolling_window_1d(a, p)
+    return insert_mean(temp)
+
+@calculate_time
+def MA_arr_rolling_jit(A, p):
+    output = np.full(A.shape, np.nan)
+    for col_index in range(A.shape[1]):
+        output[:, col_index] = MA_rollin_1d_arr_v2(A[:, col_index], p)
+    return output
+
+
+@calculate_time
+def MA_arr_multi_thread(A, p):
+    from multiprocessing.pool import ThreadPool
+    output = np.full(c_arr.shape, np.nan)
+    pool = ThreadPool()    
+    def f(col_index):
+        output[:, col_index] = MA_rollin_1d_arr_v2(c_arr[:, col_index], p)
+    pool.map(f, range(c_arr.shape[1]))
+    return output
+
+@calculate_time
+def MA_arr_multi_processes(A, p):
+    # https://stackoverflow.com/questions/32816410/parallelize-loop-over-numpy-rows
+    from multiprocessing  import Pool
+    output = np.full(c_arr.shape, np.nan)
+    pool = ThreadPool()    
+    def f(col_index):
+        output[:, col_index] = MA_rollin_1d_arr_v2(c_arr[:, col_index], p) 
+    pool.map(f, range(c_arr.shape[1]))
+    return output
+
+@calculate_time
+def MA(input_: NdType, periods: int = 20) -> NdType:
+    # https://stackoverflow.com/questions/32816410/parallelize-loop-over-numpy-rows
+    exist = data_exist_1_nan(input_)
+    exist = exist*(exist.shift(periods))
+    target_ = input_
+    target_clean = clean_target(target_).astype(np.float64)
+    return nd_universal_adapter(sma_np_1d, (target_clean,), (periods,))*exist
+
+c_long = pd.concat([c]*10, axis = 1)
+c_long_arr = c_long.to_numpy()
+
+
+test_1 = MA_arr_rolling_jit(c_long_arr, 240)
+test_2 = MA_arr_multi_thread(c_long_arr, 240) 
+test_3 = MA_arr_multi_processes(c_long_arr, 240) # the best of the best
+test_4 = MA(c_long, 240)
+
+# %%
+
+
+
+# %%
+
+import dask.dataframe as ddf
+c_t = c.T
+c_t_ddf = ddf.from_pandas(c_t, npartitions = 5)
+
+measure_time_cls = Measure_time()
+measure_time_cls.print_elapsed_time()
+MA_arr_rolling_jit(c_arr, 20)
+measure_time_cls.print_elapsed_time()
+c_t.rolling(5, axis = 1).mean()
+MA(c, 20)
+measure_time_cls.print_elapsed_time()
+
+c_ddf.apply
+
+x = da.from_array(ar, chunks=(1, arr.shape[1]))
+x.map_blocks(function, *args)
+states = x.compute()
+
+
+
+def MA_stencil_2d_arr(A, p):
+    return A.apply(lambda col: MA_stencil_1d_arr(col.values, p))
+
+c_AOT_arr = c.AOT.to_numpy()
+
+c_ddf = ddf.from_pandas(c, npartitions = 1)
+c_ddf.AOT.rolling(5).mean()
+c_ddf.apply
+
+result = np.full(c_arr.shape, np.nan)
+for col_index in range(c_arr.shape[1]):
+    print(col_index)
+    result[:, col_index] = MA_stencil_1d_arr(c_arr[:, col_index], 2)
+    
+
+def MA_stencil_2d_arr(input_: NdType, periods_, period_ = 20):
+    """
+        pseudo rank:
+            it ranges from 0 to 1
+    """
+    exist = data_exist_1_nan(input_)
+    exist = exist*(exist.shift(periods_))
+    target_ = input_
+    target_clean = clean_target(target_)
+    output = nd_universal_adapter(MA_stencil_1d_arr, (target_clean,), (periods_,))
+    return output*exist
+
+
+
+
+
+import multiprocessing as mp
+pool = mp.Pool(processes=mp.cpu_count())
+
+result = pool.map( MA_stencil_1d_arr, [c_arr[:, col_idx] for col_idx in range(c_arr.shape[1])])
+
+# %%
+measure_time_cls = Measure_time()
+measure_time_cls.print_elapsed_time()
+x1 = ffill_traditional(large_arr)
+measure_time_cls.print_elapsed_time()
+
+x4 = ffill_guvectorize(large_arr)
+measure_time_cls.print_elapsed_time()
+
+x5 = ffill_njit(large_arr)
+measure_time_cls.print_elapsed_time()
+
+
+# %%
+
+@nb.njit
+def bfill(input_arr: np.array):
+    input_arr_inverse = np.flipud(input_arr)
+    output_arr = ffill(input_arr_inverse)
+    return np.flipud(output_arr)
+
+
+
+
+def rolling_window_2d(input_arr: np.array, window: int) -> np.array:
     # https://stackoverflow.com/questions/6811183/rolling-window-for-1d-arrays-in-numpy by
     # 0.043853044509887695
     shape_output = input_arr.shape[:-1] + (input_arr.shape[-1], window)
